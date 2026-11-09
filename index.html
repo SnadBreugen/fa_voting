@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Featured Artist Voting | audiotool</title>
+<title>People's Choice Featured Artist | audiotool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@400;500;600&family=Geist+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -227,7 +227,7 @@
 </svg></a>
       <div class="account" id="account"></div>
     </div>
-    <h1>Featured Artist Voting</h1>
+    <h1>People's Choice Featured Artist</h1>
     <div class="phase">
       <span class="pill" id="phaseTag">loading</span>
       <span class="countdown" id="countdown"></span>
@@ -286,7 +286,16 @@
     <div class="panel">
       <!-- RULES: replace this list with the final rules -->
       <ol>
-        <li>Rules will be added here.</li>
+        <li>Nominate any Audiotool artist with their profile link and a short reason.</li>
+        <li>You can't nominate yourself.</li>
+        <li>You have up to 3 nominations, one per artist. Nominations are final and can't be changed, so choose carefully.</li>
+        <li>Artists must be 16 or older.</li>
+        <li>Featured Artists of the second generation can't be nominated again. Featured Artists of the first generation only if they are still active on Audiotool.</li>
+        <li>When voting opens, you get three heart sets: 3, 2 and 1 hearts. Give each set to a different artist. You can't vote for yourself. You can change your hearts until voting closes.</li>
+        <li>The top 3 become our next Featured Artists, one per month. Ties go to the artist with more 3-heart sets, then more 2-heart sets (with equal points, the artist picked as favourite more often wins).</li>
+        <li>We ask the winners to accept. That means: a portrait, answering an interview and putting together an Edition Audiotool album. Only if an artist agrees to all three, the win is confirmed. Otherwise it goes to the next in line.</li>
+        <li>One account per person.</li>
+        <li>We remove nominations or votes that break our community guidelines.</li>
       </ol>
     </div>
   </section>
@@ -313,7 +322,7 @@
 </script>
 <script>
 /* ===== SETTINGS ===== */
-const VERSION = "0.3.6";
+const VERSION = "0.3.11";
 const AT_CLIENT_ID = "b4964d76-d94d-452a-891e-90c7a8d943af";
 const WORKER_URL = "https://HIER-DEIN-WORKER.workers.dev";
 
@@ -382,7 +391,7 @@ async function atUsers(names) {
 
 /* ===== STATE ===== */
 const S = {
-  phase: "soon", override: null, dates: {}, rules: { maxReason: 160, maxNominations: 5 },
+  phase: "soon", override: null, dates: {}, rules: { maxReason: 160, maxNominations: 3 },
   nominees: [], results: null,
   me: "", isAdmin: false, votes: {}, nominated: [], allNominees: null,
   profiles: new Map(), server: "wait", serverMsg: "", preview: false
@@ -633,7 +642,7 @@ function renderStatus() {
   const dot = S.server === "ok" ? "ok" : (S.server === "fake" || S.server === "local") ? "demo" : S.server === "err" ? "err" : "";
   const srv = S.server === "fake" ? "demo" : S.server === "local" ? "test mode (this browser only)"
     : S.server === "ok" ? "online" : S.server === "err" ? "offline" : "connecting";
-  let html = "<b>FA VOTING v" + VERSION + '</b><span><span class="dot ' + dot + '"></span>' + esc(srv) + "</span><span>" + esc(S.phase) + "</span>";
+  let html = "<b>PEOPLE'S CHOICE v" + VERSION + '</b><span><span class="dot ' + dot + '"></span>' + esc(srv) + "</span><span>" + esc(S.phase) + "</span>";
   if (S.serverMsg) html += "<span>" + esc(S.serverMsg) + "</span>";
   if (MODE !== "live") html += '<span class="demo">' + ["soon", "nominate", "vote", "ended"].map(p =>
     '<button data-demo="' + p + '" class="' + (S.phase === p ? "on" : "") + '">' + p + "</button>").join("") +
@@ -683,6 +692,7 @@ function preview() {
     if (!$("nomLink").value.trim()) { box.textContent = ""; return; }
     if (!name) { box.className = "preview bad"; box.textContent = "Not a profile link"; return; }
     if (S.me && name === S.me) { box.className = "preview bad"; box.textContent = "That's you"; return; }
+    if (S.nominated.includes(name)) { box.className = "preview bad"; box.textContent = "Already nominated by you"; return; }
     box.textContent = "...";
     if (MODE === "fake") { if (!demo.profiles[name]) demo.profiles[name] = { name, displayName: short(name) }; }
     S.profiles.delete(name);
@@ -705,6 +715,8 @@ async function nominate() {
   const reason = $("nomReason").value.trim();
   if (!name) { msg.className = "msg err"; msg.textContent = "Paste a profile link"; return; }
   if (name === S.me) { msg.className = "msg err"; msg.textContent = "That's you"; return; }
+  if (S.nominated.includes(name)) { msg.className = "msg err"; msg.textContent = "You already nominated this artist"; return; }
+  if (S.nominated.length >= S.rules.maxNominations) { msg.className = "msg err"; msg.textContent = "You used all " + S.rules.maxNominations + " nominations"; return; }
   if (reason.length < 3) { msg.className = "msg err"; msg.textContent = "Add a reason"; return; }
   $("nomSend").disabled = true;
   try {
@@ -906,7 +918,7 @@ function demoDates(phase) {
 async function demoApi(path, body) {
   await new Promise(r => setTimeout(r, 120));
   const fail = (m, s) => { const e = new Error(m); e.status = s || 400; throw e; };
-  if (path === "/state") return { phase: demo.phase, override: null, dates: demoDates(demo.phase), rules: { maxReason: 160, maxNominations: 5 },
+  if (path === "/state") return { phase: demo.phase, override: null, dates: demoDates(demo.phase), rules: { maxReason: 160, maxNominations: 3 },
     nominees: demo.phase === "soon" ? [] : demoNominees().filter(n => !n.hidden), results: demo.phase === "ended" ? demoResults() : null };
   const me = demoMe();
   if (!me || (MODE === "fake" && !demo.signedIn)) fail("please sign in first", 401);
@@ -923,9 +935,8 @@ async function demoApi(path, body) {
       if (!users.length) fail("this Audiotool user does not exist");
     }
     const mine = demo.noms.filter(x => x.by === me);
-    const old = mine.find(x => x.nominee === nominee);
-    if (!old && mine.length >= 5) fail("you used all 5 nominations", 403);
-    demo.noms = demo.noms.filter(x => !(x.by === me && x.nominee === nominee));
+    if (mine.find(x => x.nominee === nominee)) fail("You already nominated this artist");
+    if (mine.length >= 3) fail("You used all 3 nominations", 403);
     demo.noms.push({ nominee, by: me, text: body.reason, at: Date.now() });
     lsSave();
     return { ok: true, nominee };
