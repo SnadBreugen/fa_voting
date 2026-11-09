@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Featured Artist Voting | audiotool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sometype+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ES Build is used when it is installed or added as a webfont, Sometype Mono otherwise */
+  :root {
+    --bg: #0e0f10;
+    --panel: #17191b;
+    --panel2: #1e2124;
+    --line: #2c3034;
+    --text: #eceae4;
+    --dim: #8b9095;
+    --heart: #ff4d6d;
+    --heart-dim: #4a2830;
+    --ok: #5fd39a;
+    --err: #ff7a59;
+    --gold: #e8b84a;
+    --silver: #c9ced6;
+    --bronze: #c8834e;
+    --head: "ES Build", "Sometype Mono", ui-monospace, monospace;
+    --mono: "Sometype Mono", ui-monospace, monospace;
+    --bar: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 15px; }
+  body { padding-bottom: calc(var(--bar) + 16px + env(safe-area-inset-bottom)); }
+  body.with-tray { padding-bottom: calc(var(--bar) + 132px + env(safe-area-inset-bottom)); }
+  a { color: inherit; }
+  button { font-family: var(--mono); font-size: 13px; cursor: pointer; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
+
+  /* header */
+  header { border-bottom: 2px solid var(--line); padding: 26px 0 22px; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .wordmark { font-family: var(--head); font-weight: 700; font-size: 20px; letter-spacing: -0.5px; text-decoration: none; }
+  h1 { font-family: var(--head); font-size: clamp(34px, 7vw, 72px); line-height: 0.95; margin: 22px 0 14px; letter-spacing: -1.5px; text-transform: uppercase; }
+  .phase { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .phase-tag { font-weight: 700; text-transform: uppercase; padding: 3px 8px; border: 2px solid var(--text); font-size: 13px; }
+  .countdown { color: var(--dim); }
+  .countdown b { color: var(--text); font-weight: 500; }
+  .steps { display: flex; gap: 0; margin-top: 18px; border: 2px solid var(--line); }
+  .step { flex: 1; padding: 8px 10px; font-size: 12px; color: var(--dim); border-right: 2px solid var(--line); text-transform: uppercase; }
+  .step:last-child { border-right: 0; }
+  .step.now { color: var(--bg); background: var(--text); font-weight: 700; }
+  .step small { display: block; text-transform: none; font-weight: 400; margin-top: 2px; }
+
+  /* account */
+  .account { display: flex; align-items: center; gap: 10px; }
+  .btn { background: var(--text); color: var(--bg); border: 2px solid var(--text); padding: 8px 14px; font-weight: 700; text-transform: uppercase; }
+  .btn:hover { background: transparent; color: var(--text); }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn.ghost:hover { border-color: var(--text); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .me { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .me .ava { width: 28px; height: 28px; }
+
+  /* sections */
+  section { margin-top: 34px; }
+  h2 { font-family: var(--head); text-transform: uppercase; font-size: 22px; margin: 0 0 14px; letter-spacing: -0.5px; }
+  .panel { background: var(--panel); border: 2px solid var(--line); padding: 18px; }
+  .hint { color: var(--dim); font-size: 13px; line-height: 1.5; }
+
+  /* nominate */
+  .nom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .nom-grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 12px; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+  input[type=text], textarea, select {
+    width: 100%; background: var(--bg); color: var(--text); border: 2px solid var(--line);
+    font-family: var(--mono); font-size: 15px; padding: 10px; outline: none; border-radius: 0;
+  }
+  input[type=text]:focus, textarea:focus { border-color: var(--text); }
+  textarea { height: 96px; resize: none; }
+  .preview { height: 64px; display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 0 10px; border: 2px dashed var(--line); color: var(--dim); font-size: 13px; }
+  .preview.found { border-style: solid; color: var(--text); }
+  .preview.bad { color: var(--err); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .counter { font-size: 12px; color: var(--dim); }
+  .msg { min-height: 20px; font-size: 13px; margin-top: 10px; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--err); }
+  .mine { margin-top: 14px; font-size: 13px; color: var(--dim); }
+  .mine b { color: var(--text); }
+
+  /* cards */
+  .grid-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 2px solid var(--line); height: 318px; display: flex; flex-direction: column; padding: 14px; position: relative; }
+  .card.has-hearts { border-color: var(--heart); }
+  .card.is-hidden { opacity: 0.45; border-style: dashed; }
+  .card-top { display: flex; gap: 12px; align-items: center; }
+  .ava { position: relative; width: 56px; height: 56px; flex: none; display: grid; place-items: center; font-weight: 700; color: var(--bg); background: var(--dim); overflow: hidden; text-decoration: none; font-size: 18px; }
+  .ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .who { min-width: 0; }
+  .dn { font-family: var(--head); font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .un { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .un a { text-decoration: none; } .un a:hover { text-decoration: underline; }
+  .noms { font-size: 11px; text-transform: uppercase; color: var(--dim); margin: 12px 0 6px; }
+  .reasons { list-style: none; margin: 0; padding: 0; flex: 1; overflow: hidden; position: relative; }
+  .reasons::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 28px; background: linear-gradient(transparent, var(--panel)); }
+  .reasons li { font-size: 13px; line-height: 1.45; margin-bottom: 8px; }
+  .reasons .by { color: var(--dim); font-size: 11px; }
+  .more { background: none; border: 0; color: var(--dim); padding: 4px 0; text-align: left; text-decoration: underline; font-size: 12px; }
+  .more:hover { color: var(--text); }
+  .give { display: flex; gap: 6px; margin-top: 8px; }
+  .hb { flex: 1; height: 40px; background: var(--bg); border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 2px; color: var(--heart-dim); padding: 0; }
+  .hb:hover { border-color: var(--heart); color: var(--heart); }
+  .hb.on { background: var(--heart); border-color: var(--heart); color: var(--bg); }
+  .hb.elsewhere { color: #6a5258; }
+  .self { margin-top: 8px; height: 40px; display: grid; place-items: center; border: 2px dashed var(--line); color: var(--dim); font-size: 12px; text-transform: uppercase; }
+  .admin-row { display: flex; gap: 6px; margin-top: 8px; }
+  .admin-row button { flex: 1; background: transparent; color: var(--err); border: 2px solid var(--err); padding: 4px; text-transform: uppercase; font-size: 11px; }
+  svg.h { width: 14px; height: 14px; display: block; }
+  .empty { padding: 40px 18px; text-align: center; color: var(--dim); border: 2px dashed var(--line); }
+
+  /* tray */
+  .tray { position: fixed; left: 0; right: 0; bottom: calc(var(--bar) + env(safe-area-inset-bottom)); background: var(--panel2); border-top: 2px solid var(--heart); z-index: 20; display: none; }
+  body.with-tray .tray { display: block; }
+  .tray .wrap { padding-top: 10px; padding-bottom: 10px; }
+  .tray-head { display: flex; justify-content: space-between; font-size: 12px; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; gap: 10px; }
+  .tray-head .save.ok { color: var(--ok); } .tray-head .save.err { color: var(--err); }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .slot { height: 62px; border: 2px dashed var(--line); display: flex; flex-direction: column; justify-content: center; padding: 0 10px; min-width: 0; background: var(--bg); text-align: left; color: var(--dim); }
+  .slot .hs { display: flex; gap: 2px; color: var(--heart); margin-bottom: 4px; }
+  .slot .t { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot.full { border-style: solid; border-color: var(--heart); color: var(--text); }
+  .slot.full:hover .t::after { content: "  remove"; color: var(--err); }
+  .tray-login { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* podium */
+  .podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 14px; align-items: end; }
+  @media (max-width: 760px) { .podium { grid-template-columns: 1fr; } .podium .p1 { order: -1; } }
+  .pod { background: var(--panel); border: 2px solid var(--line); padding: 18px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .pod .ava { width: 96px; height: 96px; font-size: 30px; }
+  .pod.p1 { border-color: var(--gold); padding-top: 30px; } .pod.p1 .medal { background: var(--gold); }
+  .pod.p2 { border-color: var(--silver); } .pod.p2 .medal { background: var(--silver); }
+  .pod.p3 { border-color: var(--bronze); } .pod.p3 .medal { background: var(--bronze); }
+  .medal { color: var(--bg); font-weight: 700; text-transform: uppercase; padding: 3px 10px; font-size: 12px; }
+  .pts { font-size: 13px; color: var(--dim); }
+  .pts b { color: var(--text); font-size: 18px; }
+  .ranking { list-style: none; padding: 0; margin: 18px 0 0; border-top: 2px solid var(--line); }
+  .ranking li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 2px solid var(--line); }
+  .ranking .pos { width: 34px; color: var(--dim); text-align: right; }
+  .ranking .ava { width: 36px; height: 36px; font-size: 14px; }
+  .ranking .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ranking .p { color: var(--dim); font-size: 13px; }
+
+  /* rules */
+  .rules ol { margin: 0; padding-left: 20px; line-height: 1.7; }
+  .rules .placeholder { color: var(--dim); font-style: italic; }
+
+  /* admin */
+  .admin { border-color: var(--err); }
+  .admin h2 { color: var(--err); }
+  .admin .row select { width: auto; }
+
+  /* overlay */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 50; display: none; align-items: center; justify-content: center; padding: 18px; }
+  .overlay.open { display: flex; }
+  .sheet { background: var(--panel); border: 2px solid var(--text); width: 100%; max-width: 560px; max-height: 80vh; display: flex; flex-direction: column; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 2px solid var(--line); gap: 10px; }
+  .sheet-body { overflow: auto; padding: 14px; }
+  .sheet-body li { list-style: none; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+  .sheet-body ul { padding: 0; margin: 0; }
+  .sheet-body .x { background: none; border: 0; color: var(--err); text-decoration: underline; font-size: 11px; padding: 0 0 0 8px; }
+
+  /* statusbar */
+  .status { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--bar) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--text); color: var(--bg); font-size: 11px; z-index: 30; }
+  .status .wrap { height: var(--bar); display: flex; align-items: center; gap: 14px; overflow-x: auto; white-space: nowrap; }
+  .status b { font-weight: 700; }
+  .status .demo button { background: transparent; border: 1px solid var(--bg); color: var(--bg); font-size: 10px; padding: 1px 6px; margin-left: 4px; text-transform: uppercase; }
+  .status .demo button.on { background: var(--bg); color: var(--text); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #999; margin-right: 5px; }
+  .dot.ok { background: #1e9c5f; } .dot.err { background: #d0402a; } .dot.demo { background: #c48a00; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="top">
+      <a class="wordmark" href="https://www.audiotool.com" target="_blank" rel="noopener">audiotool</a>
+      <div class="account" id="account"></div>
+    </div>
+    <h1>Featured<br>Artist Voting</h1>
+    <div class="phase">
+      <span class="phase-tag" id="phaseTag">loading</span>
+      <span class="countdown" id="countdown"></span>
+    </div>
+    <div class="steps" id="steps"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="secNominate" hidden>
+    <h2>Nominate an artist</h2>
+    <div class="panel">
+      <div class="nom-grid">
+        <div>
+          <label for="nomLink">Audiotool profile link</label>
+          <input type="text" id="nomLink" placeholder="https://www.audiotool.com/user/..." autocomplete="off" autocapitalize="off" spellcheck="false">
+          <div class="preview" id="nomPreview">Paste a profile link and we show who it is.</div>
+        </div>
+        <div>
+          <label for="nomReason">Why this artist?</label>
+          <textarea id="nomReason" maxlength="160" placeholder="One sentence is enough."></textarea>
+          <div class="row">
+            <span class="counter" id="nomCount">0 / 160</span>
+            <button class="btn" id="nomSend">Nominate</button>
+          </div>
+        </div>
+      </div>
+      <div class="msg" id="nomMsg"></div>
+      <div class="mine" id="nomMine"></div>
+    </div>
+  </section>
+
+  <section id="secResults" hidden>
+    <h2>The winners</h2>
+    <div id="results"></div>
+  </section>
+
+  <section id="secGrid">
+    <div class="grid-head">
+      <h2 id="gridTitle">Nominees</h2>
+      <span class="hint" id="gridHint"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="secRules" class="rules">
+    <h2>Rules</h2>
+    <div class="panel">
+      <!-- RULES: replace this list with the final rules -->
+      <ol>
+        <li class="placeholder">Rules will be added here.</li>
+      </ol>
+      <p class="hint" style="margin-bottom:0">You need an Audiotool account to nominate and to vote. You can't nominate or vote for yourself. Every voter has three heart sets (3, 2 and 1 hearts) for three different artists. Results are shown when voting has closed.</p>
+    </div>
+  </section>
+
+  <section id="secAdmin" class="panel admin" hidden>
+    <h2>Admin</h2>
+    <div class="hint">Only visible to admins. Changing the phase is for testing, set it back to "auto" before the real start.</div>
+    <div class="row">
+      <span>
+        <select id="admPhase">
+          <option value="">auto (by date)</option>
+          <option value="soon">soon</option>
+          <option value="nominate">nominate</option>
+          <option value="vote">vote</option>
+          <option value="ended">ended</option>
+        </select>
+        <button class="btn ghost" id="admPhaseSet">Set phase</button>
+      </span>
+      <button class="btn ghost" id="admRecount">Count again</button>
+    </div>
+    <div class="msg" id="admMsg"></div>
+  </section>
+
+</main>
+
+<div class="tray" id="tray">
+  <div class="wrap" id="trayInner"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-head"><b id="sheetTitle"></b><button class="btn ghost" id="sheetClose">Close</button></div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="status"><div class="wrap" id="status"></div></div>
+
+<script>
+/* ===== SETTINGS ===== */
+const VERSION = "0.2.0";
+const AT_CLIENT_ID = "b4964d76-d94d-452a-891e-90c7a8d943af";
+const WORKER_URL = "https://HIER-DEIN-WORKER.workers.dev";
+
+const params = new URLSearchParams(location.search);
+const FAKE = params.has("demo") || location.protocol === "file:" || /claude/.test(location.hostname);
+const MODE = FAKE ? "fake" : WORKER_URL.includes("HIER") ? "local" : "live";
+
+/* ===== AUDIOTOOL CONNECTION (as in Pulvball) ===== */
+const AT_SCOPE = "offline";
+const AT_API = "https://api.audiotool.com/";
+const atRedirect = () => location.origin + location.pathname;
+let atSession = null, atSdk = null;
+
+function atLoadSdk() {
+  if (!atSdk) atSdk = import("./nexus.bundle.js").then(m => m.default || m);
+  return atSdk;
+}
+async function atBoot() {
+  if (location.protocol === "file:") return null;
+  try {
+    const sdk = await atLoadSdk();
+    const at = await sdk.audiotool({ clientId: AT_CLIENT_ID, redirectUrl: atRedirect(), scope: AT_SCOPE });
+    if (at.status === "authenticated") atSession = at;
+    else if (at.error) console.warn("[AT] " + at.error.message);
+  } catch (e) { console.warn("[AT] " + (e && e.message)); }
+  return atSession;
+}
+async function atLogin() {
+  const sdk = await atLoadSdk();
+  const at = await sdk.audiotool({ clientId: AT_CLIENT_ID, redirectUrl: atRedirect(), scope: AT_SCOPE });
+  if (at.status === "unauthenticated") { if (at.login) at.login(); return null; }
+  atSession = at;
+  return at;
+}
+function atLogout() {
+  if (atSession && atSession.logout) atSession.logout();
+  atSession = null;
+}
+function atToken() {
+  try { return localStorage.getItem("oidc_" + AT_CLIENT_ID + "_oidc_access_token") || ""; }
+  catch (e) { return ""; }
+}
+function atAccount() { return ((atSession && atSession.userName) || "").toLowerCase(); }
+async function atPublic(service, method, body) {
+  const r = await fetch(AT_API + service + "/" + method, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(method + " answered " + r.status);
+  return r.json();
+}
+function atUserAusLink(text) {
+  const t = String(text || "").trim();
+  const m = t.match(/audiotool\.com\/user\/([^\/?#\s]+)/i);
+  const n = m ? m[1] : /^[\w.-]+$/.test(t) ? t : "";
+  return n ? "users/" + decodeURIComponent(n).toLowerCase() : "";
+}
+async function atUsers(names) {
+  const d = await atPublic("audiotool.user.v1.UserService", "BatchGetUsers", { userNames: names });
+  return (d && d.users) || [];
+}
+
+/* ===== STATE ===== */
+const S = {
+  phase: "soon", override: null, dates: {}, rules: { maxReason: 160, maxNominations: 5 },
+  nominees: [], results: null,
+  me: "", isAdmin: false, votes: {}, nominated: [], allNominees: null,
+  profiles: new Map(), server: "wait", serverMsg: ""
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const short = n => String(n || "").replace(/^users\//, "");
+const profileUrl = n => "https://www.audiotool.com/user/" + encodeURIComponent(short(n));
+const dname = n => (S.profiles.get(n) && S.profiles.get(n).displayName) || short(n);
+
+function hash(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const HEART = '<svg class="h" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21.2 10.6 20C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.8 0 3.5.8 4.6 2.1C13.1 3.8 14.8 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.6L12 21.2z"/></svg>';
+const hearts = n => HEART.repeat(n);
+
+function avatarHtml(name, cls = "ava", link = false) {
+  const p = S.profiles.get(name);
+  const label = short(name).slice(0, 2).toUpperCase();
+  const tint = "hsl(" + (hash(name) % 360) + " 45% 62%)";
+  const inner = p && p.avatarUrl
+    ? '<img src="' + esc(p.avatarUrl) + '" alt="" loading="lazy" onerror="this.remove()">'
+    : "";
+  const tag = link ? "a" : "div";
+  const href = link ? ' href="' + profileUrl(name) + '" target="_blank" rel="noopener"' : "";
+  return "<" + tag + ' class="' + cls + '" style="background:' + tint + '"' + href + ">" + label.replace(/./g, c => esc(c)) + inner + "</" + tag + ">";
+}
+
+/* ===== SERVER ===== */
+async function api(path, body) {
+  if (MODE !== "live") return demoApi(path, body);
+  const headers = {};
+  const tok = atToken();
+  if (tok && atSession) headers.authorization = "Bearer " + tok;
+  if (body !== undefined) headers["content-type"] = "application/json";
+  const r = await fetch(WORKER_URL + path, {
+    method: body === undefined ? "GET" : "POST",
+    headers, body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  let d = null; try { d = await r.json(); } catch (e) {}
+  if (!r.ok) { const err = new Error((d && d.error) || ("server answered " + r.status)); err.status = r.status; throw err; }
+  return d;
+}
+
+async function loadState() {
+  try {
+    const d = await api("/state");
+    S.phase = d.phase; S.override = d.override; S.dates = d.dates || {}; S.rules = d.rules || S.rules;
+    S.nominees = d.nominees || []; S.results = d.results;
+    S.server = MODE === "live" ? "ok" : MODE;
+  } catch (e) { S.server = "err"; S.serverMsg = e.message; }
+}
+
+async function loadMe() {
+  S.me = ""; S.isAdmin = false; S.votes = {}; S.nominated = []; S.allNominees = null;
+  if (MODE === "fake" ? !demo.signedIn : !atSession) return;
+  try {
+    const d = await api("/me");
+    S.me = d.account; S.isAdmin = !!d.isAdmin; S.votes = d.votes || {}; S.nominated = d.nominated || [];
+    S.allNominees = d.allNominees || null;
+    delete S.votes.at;
+  } catch (e) {
+    if (e.status === 401) { S.serverMsg = "server could not verify your login"; }
+    else S.serverMsg = e.message;
+  }
+}
+
+async function loadProfiles(names) {
+  const need = [...new Set(names)].filter(n => n && !S.profiles.has(n));
+  if (!need.length) return;
+  if (MODE === "fake") { for (const n of need) S.profiles.set(n, demo.profiles[n] || { name: n, displayName: short(n) }); return; }
+  for (let i = 0; i < need.length; i += 50) {
+    try {
+      const users = await atUsers(need.slice(i, i + 50));
+      for (const u of users) S.profiles.set(String(u.name).toLowerCase(), u);
+    } catch (e) { console.warn("[profiles] " + e.message); }
+  }
+}
+
+async function refresh() {
+  await loadState();
+  await loadMe();
+  const list = (S.isAdmin && S.allNominees) ? S.allNominees : S.nominees;
+  const names = [S.me];
+  for (const n of list) { names.push(n.name); for (const r of n.reasons) names.push(r.by); }
+  if (S.results && S.results.ranking) for (const r of S.results.ranking.slice(0, 50)) names.push(r.name);
+  await loadProfiles(names);
+  renderAll();
+}
+
+/* ===== RENDER ===== */
+function fmtDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+function left(ms) {
+  if (ms <= 0) return "now";
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+  return d > 0 ? d + "d " + String(h).padStart(2, "0") + "h " + String(m).padStart(2, "0") + "m"
+               : String(h).padStart(2, "0") + "h " + String(m).padStart(2, "0") + "m " + String(s).padStart(2, "0") + "s";
+}
+
+function renderHeader() {
+  const tags = { soon: "Coming soon", nominate: "Nominations open", vote: "Voting open", ended: "Voting closed" };
+  $("phaseTag").textContent = tags[S.phase] || S.phase;
+  const steps = [
+    ["soon", "Starts", S.dates.nominateFrom],
+    ["nominate", "Nominate", S.dates.voteFrom ? "until " + fmtDate(S.dates.voteFrom) : ""],
+    ["vote", "Vote", S.dates.voteUntil ? "until " + fmtDate(S.dates.voteUntil) : ""],
+    ["ended", "Winners", ""]
+  ];
+  steps[0][2] = S.dates.nominateFrom ? fmtDate(S.dates.nominateFrom) : "";
+  $("steps").innerHTML = steps.map(s => '<div class="step' + (s[0] === S.phase ? " now" : "") + '">' + esc(s[1]) + "<small>" + esc(s[2]) + "</small></div>").join("");
+  tick();
+}
+function tick() {
+  const now = Date.now();
+  let txt = "";
+  if (S.override) txt = "test phase set by admin";
+  else if (S.phase === "soon" && S.dates.nominateFrom) txt = "Nominations open in <b>" + left(Date.parse(S.dates.nominateFrom) - now) + "</b>";
+  else if (S.phase === "nominate" && S.dates.voteFrom) txt = "Nominations close in <b>" + left(Date.parse(S.dates.voteFrom) - now) + "</b>";
+  else if (S.phase === "vote" && S.dates.voteUntil) txt = "Voting closes in <b>" + left(Date.parse(S.dates.voteUntil) - now) + "</b>";
+  else if (S.phase === "ended") txt = "Thanks to everyone who took part";
+  $("countdown").innerHTML = txt;
+}
+
+function renderAccount() {
+  const el = $("account");
+  if (S.me) {
+    el.innerHTML = '<div class="me">' + avatarHtml(S.me) + "<span>" + esc(dname(S.me)) + '</span></div><button class="btn ghost" id="btnLogout">Sign out</button>';
+    $("btnLogout").onclick = logout;
+  } else {
+    el.innerHTML = '<button class="btn" id="btnLogin">Sign in with Audiotool</button>';
+    $("btnLogin").onclick = login;
+  }
+}
+
+function renderNominate() {
+  $("secNominate").hidden = S.phase !== "nominate";
+  if (S.phase !== "nominate") return;
+  const max = S.rules.maxNominations;
+  $("nomReason").maxLength = S.rules.maxReason;
+  updateCounter();
+  if (!S.me) { $("nomMine").innerHTML = "Sign in with your Audiotool account to send a nomination."; return; }
+  const list = S.nominated.map(n => '<a href="' + profileUrl(n) + '" target="_blank" rel="noopener">' + esc(dname(n)) + "</a>").join(", ");
+  $("nomMine").innerHTML = "Your nominations: <b>" + S.nominated.length + " / " + max + "</b>" + (list ? " (" + list + ")" : "") +
+    (S.nominated.length ? '<br>Nominating the same artist again replaces your reason.' : "");
+}
+
+function visibleList() {
+  return (S.isAdmin && S.allNominees) ? S.allNominees : S.nominees;
+}
+
+function sortedNominees() {
+  const list = visibleList().slice();
+  if (S.phase === "vote") {
+    const seed = S.me || "guest";
+    list.sort((a, b) => hash(seed + a.name) - hash(seed + b.name));
+  } else {
+    list.sort((a, b) => b.reasons.length - a.reasons.length || ((a.reasons[0] || {}).at || 0) - ((b.reasons[0] || {}).at || 0));
+  }
+  return list;
+}
+
+function cardHtml(n) {
+  const isSelf = S.me && n.name === S.me;
+  const has = ["3", "2", "1"].some(p => S.votes[p] === n.name);
+  const reasons = n.reasons.slice(-3).reverse().map(r =>
+    "<li>" + esc(r.text) + '<br><span class="by">by ' + esc(dname(r.by)) + "</span></li>").join("");
+  let give = "";
+  if (S.phase === "vote") {
+    if (isSelf) give = '<div class="self">That is you</div>';
+    else give = '<div class="give">' + ["3", "2", "1"].map(p => {
+      const on = S.votes[p] === n.name;
+      const elsewhere = !on && S.votes[p];
+      return '<button class="hb' + (on ? " on" : "") + (elsewhere ? " elsewhere" : "") + '" data-give="' + p + '" data-name="' + esc(n.name) + '" title="' + p + ' heart' + (p === "1" ? "" : "s") + '">' + hearts(+p) + "</button>";
+    }).join("") + "</div>";
+  }
+  const admin = S.isAdmin ? '<div class="admin-row"><button data-hide="' + esc(n.name) + '" data-state="' + (n.hidden ? "0" : "1") + '">' + (n.hidden ? "Show again" : "Hide") + "</button></div>" : "";
+  return '<article class="card' + (has ? " has-hearts" : "") + (n.hidden ? " is-hidden" : "") + '">' +
+    '<div class="card-top">' + avatarHtml(n.name, "ava", true) +
+    '<div class="who"><div class="dn">' + esc(dname(n.name)) + '</div><div class="un"><a href="' + profileUrl(n.name) + '" target="_blank" rel="noopener">@' + esc(short(n.name)) + "</a></div></div></div>" +
+    '<div class="noms">' + n.reasons.length + " nomination" + (n.reasons.length === 1 ? "" : "s") + (n.hidden ? " / hidden" : "") + "</div>" +
+    '<ul class="reasons">' + reasons + "</ul>" +
+    '<button class="more" data-more="' + esc(n.name) + '">Read all</button>' +
+    give + admin + "</article>";
+}
+
+function renderGrid() {
+  const show = S.phase === "nominate" || S.phase === "vote";
+  $("secGrid").hidden = !show;
+  if (!show) return;
+  const list = sortedNominees();
+  $("gridTitle").textContent = "Nominees (" + list.filter(n => !n.hidden).length + ")";
+  $("gridHint").textContent = S.phase === "vote" ? "The order is shuffled for every voter." : "Most nominated first.";
+  $("grid").innerHTML = list.length ? list.map(cardHtml).join("") : '<div class="empty">No nominations yet. Be the first.</div>';
+}
+
+function renderTray() {
+  const on = S.phase === "vote";
+  document.body.classList.toggle("with-tray", on);
+  if (!on) return;
+  const el = $("trayInner");
+  if (!S.me) {
+    el.innerHTML = '<div class="tray-login"><span>You have 3 sets of hearts to give: ' + hearts(3) + " / " + hearts(2) + " / " + hearts(1) + '</span><button class="btn" id="trayLogin">Sign in to vote</button></div>';
+    el.querySelectorAll("svg").forEach(s => s.style.display = "inline-block");
+    $("trayLogin").onclick = login;
+    return;
+  }
+  el.innerHTML = '<div class="tray-head"><span>Your hearts, tap a set to take it back</span><span class="save ' + saveState.cls + '">' + esc(saveState.text) + "</span></div>" +
+    '<div class="slots">' + ["3", "2", "1"].map(p => {
+      const who = S.votes[p];
+      return '<button class="slot' + (who ? " full" : "") + '" data-take="' + p + '"><span class="hs">' + hearts(+p) + '</span><span class="t">' + (who ? esc(dname(who)) : "give to an artist") + "</span></button>";
+    }).join("") + "</div>";
+}
+
+function renderResults() {
+  $("secResults").hidden = S.phase !== "ended";
+  if (S.phase !== "ended") return;
+  const el = $("results");
+  const r = S.results;
+  if (!r || r.counting) { el.innerHTML = '<div class="empty">Counting the hearts. Check back in a few minutes.</div>'; return; }
+  const rk = r.ranking || [];
+  if (!rk.length) { el.innerHTML = '<div class="empty">No votes were cast.</div>'; return; }
+  const medal = ["Gold", "Silver", "Bronze"];
+  const pod = i => {
+    const x = rk[i]; if (!x) return "<div></div>";
+    return '<div class="pod p' + (i + 1) + '"><span class="medal">' + medal[i] + "</span>" + avatarHtml(x.name, "ava", true) +
+      '<div class="dn">' + esc(dname(x.name)) + '</div><div class="pts"><b>' + x.points + "</b> points</div></div>";
+  };
+  const rest = rk.slice(3).map((x, i) => '<li><span class="pos">' + (i + 4) + "</span>" + avatarHtml(x.name, "ava", true) +
+    '<span class="nm">' + esc(dname(x.name)) + '</span><span class="p">' + x.points + " pts</span></li>").join("");
+  el.innerHTML = '<div class="podium">' + pod(1) + pod(0) + pod(2) + "</div>" +
+    (rest ? '<ul class="ranking">' + rest + "</ul>" : "") +
+    '<p class="hint">' + (r.voters || 0) + " people voted. Ties are decided by the number of 3-heart sets, then 2-heart sets.</p>";
+}
+
+function renderAdmin() {
+  $("secAdmin").hidden = !S.isAdmin;
+  if (S.isAdmin) $("admPhase").value = S.override || "";
+}
+
+function renderStatus() {
+  const dot = S.server === "ok" ? "ok" : (S.server === "fake" || S.server === "local") ? "demo" : S.server === "err" ? "err" : "";
+  const srv = S.server === "fake" ? "demo mode, nothing is saved" : S.server === "local" ? "test mode, saved only in this browser"
+    : S.server === "ok" ? "server ok" : S.server === "err" ? "server offline" : "connecting";
+  let html = "<b>FEATURED ARTIST VOTING v" + VERSION + '</b><span><span class="dot ' + dot + '"></span>' + esc(srv) + "</span><span>phase: " + esc(S.phase) + "</span>";
+  if (S.serverMsg) html += "<span>" + esc(S.serverMsg) + "</span>";
+  if (MODE !== "live") html += '<span class="demo">try:' + ["soon", "nominate", "vote", "ended"].map(p =>
+    '<button data-demo="' + p + '" class="' + (S.phase === p ? "on" : "") + '">' + p + "</button>").join("") +
+    (MODE === "fake" ? '<button data-demo="admin" class="' + (demo.admin ? "on" : "") + '">admin</button>' : '<button data-demo="reset">reset</button>') + "</span>";
+  $("status").innerHTML = html;
+}
+
+function renderAll() {
+  renderHeader(); renderAccount(); renderNominate(); renderResults(); renderGrid(); renderTray(); renderAdmin(); renderStatus();
+}
+
+/* ===== LOGIN ===== */
+function saveDraft() {
+  try { sessionStorage.setItem("fav_draft", JSON.stringify({ link: $("nomLink").value, reason: $("nomReason").value })); } catch (e) {}
+}
+function restoreDraft() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem("fav_draft") || "null");
+    if (d) { $("nomLink").value = d.link || ""; $("nomReason").value = d.reason || ""; sessionStorage.removeItem("fav_draft"); }
+  } catch (e) {}
+}
+async function login() {
+  saveDraft();
+  if (MODE === "fake") { demo.signedIn = true; await refresh(); restoreDraft(); preview(); return; }
+  if (location.protocol === "file:") { alertMsg("Sign in only works on the live page, not from a local file."); return; }
+  try {
+    const at = await atLogin();
+    if (at) await refresh();
+  } catch (e) { alertMsg("sign in failed: " + (e && e.message)); }
+}
+async function logout() {
+  if (MODE === "fake") demo.signedIn = false; else atLogout();
+  await refresh();
+}
+function alertMsg(t) { S.serverMsg = t; renderStatus(); }
+
+/* ===== NOMINATE ===== */
+let previewTimer = null, previewName = "";
+function updateCounter() { $("nomCount").textContent = $("nomReason").value.length + " / " + S.rules.maxReason; }
+
+function preview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const box = $("nomPreview");
+    const name = atUserAusLink($("nomLink").value);
+    previewName = "";
+    box.className = "preview";
+    if (!$("nomLink").value.trim()) { box.textContent = "Paste a profile link and we show who it is."; return; }
+    if (!name) { box.className = "preview bad"; box.textContent = "This does not look like an Audiotool profile link."; return; }
+    if (S.me && name === S.me) { box.className = "preview bad"; box.textContent = "That is you. You can't nominate yourself."; return; }
+    box.textContent = "Looking up " + short(name) + " ...";
+    if (MODE === "fake") { if (!demo.profiles[name]) demo.profiles[name] = { name, displayName: short(name) }; }
+    S.profiles.delete(name);
+    await loadProfiles([name]);
+    const p = S.profiles.get(name);
+    if (atUserAusLink($("nomLink").value) !== name) return;
+    if (!p) { box.className = "preview bad"; box.textContent = "We could not find this Audiotool user."; return; }
+    previewName = name;
+    const already = visibleList().find(n => n.name === name);
+    box.className = "preview found";
+    box.innerHTML = avatarHtml(name) + "<div><b>" + esc(p.displayName || short(name)) + "</b><br><span class=\"hint\">@" + esc(short(name)) +
+      (already ? " / already nominated " + already.reasons.length + "x, your reason will be added" : "") + "</span></div>";
+  }, 350);
+}
+
+async function nominate() {
+  const msg = $("nomMsg");
+  msg.className = "msg"; msg.textContent = "";
+  if (!S.me) { await login(); return; }
+  const name = atUserAusLink($("nomLink").value);
+  const reason = $("nomReason").value.trim();
+  if (!name) { msg.className = "msg err"; msg.textContent = "Paste the link to an Audiotool profile first."; return; }
+  if (name === S.me) { msg.className = "msg err"; msg.textContent = "You can't nominate yourself."; return; }
+  if (reason.length < 3) { msg.className = "msg err"; msg.textContent = "Tell us in a few words why."; return; }
+  $("nomSend").disabled = true;
+  try {
+    const d = await api("/nominate", { nominee: name, reason });
+    const nn = d.nominee || name;
+    let entry = S.nominees.find(n => n.name === nn);
+    if (!entry) { entry = { name: nn, reasons: [] }; S.nominees.push(entry); }
+    entry.reasons = entry.reasons.filter(r => r.by !== S.me);
+    entry.reasons.push({ by: S.me, text: reason, at: Date.now() });
+    if (S.allNominees && !S.allNominees.includes(entry) && !S.allNominees.find(n => n.name === nn)) S.allNominees.push(entry);
+    if (!S.nominated.includes(nn)) S.nominated.push(nn);
+    await loadProfiles([nn]);
+    $("nomLink").value = ""; $("nomReason").value = ""; preview(); updateCounter();
+    msg.className = "msg ok"; msg.textContent = "Thanks, " + dname(nn) + " is nominated.";
+    renderNominate(); renderGrid();
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = e.message;
+  } finally { $("nomSend").disabled = false; }
+}
+
+/* ===== VOTE ===== */
+const saveState = { text: "", cls: "" };
+let saveTimer = null;
+function setSave(text, cls) { saveState.text = text; saveState.cls = cls || ""; renderTray(); }
+
+function give(points, name) {
+  if (!S.me) { login(); return; }
+  if (name === S.me) return;
+  if (S.votes[points] === name) delete S.votes[points];
+  else {
+    for (const p of ["3", "2", "1"]) if (S.votes[p] === name) delete S.votes[p];
+    S.votes[points] = name;
+  }
+  renderGrid(); setSave("saving ...");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveVotes, 500);
+}
+function takeBack(points) {
+  if (!S.votes[points]) return;
+  delete S.votes[points];
+  renderGrid(); setSave("saving ...");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveVotes, 500);
+}
+async function saveVotes() {
+  try {
+    const body = { "3": S.votes["3"] || null, "2": S.votes["2"] || null, "1": S.votes["1"] || null };
+    await api("/vote", body);
+    setSave("saved", "ok");
+  } catch (e) {
+    setSave(e.message, "err");
+    await loadMe(); renderGrid(); renderTray();
+  }
+}
+
+/* ===== OVERLAY ===== */
+function openReasons(name) {
+  const n = visibleList().find(x => x.name === name);
+  if (!n) return;
+  $("sheetTitle").textContent = dname(name) + " (" + n.reasons.length + ")";
+  $("sheetBody").innerHTML = "<ul>" + n.reasons.slice().reverse().map(r =>
+    "<li>" + esc(r.text) + '<br><span class="hint">by <a href="' + profileUrl(r.by) + '" target="_blank" rel="noopener">' + esc(dname(r.by)) + "</a></span>" +
+    (S.isAdmin ? '<button class="x" data-rm="' + esc(name) + '" data-by="' + esc(r.by) + '">remove</button>' : "") + "</li>").join("") + "</ul>";
+  $("overlay").classList.add("open");
+}
+function closeSheet() { $("overlay").classList.remove("open"); }
+
+/* ===== ADMIN ===== */
+async function admin(action, body) {
+  const m = $("admMsg");
+  m.className = "msg"; m.textContent = "...";
+  try {
+    const d = await api("/admin/" + action, body || {});
+    m.className = "msg ok"; m.textContent = "done" + (d && d.voters !== undefined ? ", " + d.voters + " voters counted" : "") + ". The public page updates within about 20 seconds.";
+    await refresh();
+  } catch (e) { m.className = "msg err"; m.textContent = e.message; }
+}
+
+/* ===== EVENTS ===== */
+document.addEventListener("click", e => {
+  const t = e.target.closest("button, [data-more]");
+  if (!t) return;
+  if (t.dataset.give) give(t.dataset.give, t.dataset.name);
+  else if (t.dataset.take) takeBack(t.dataset.take);
+  else if (t.dataset.more) openReasons(t.dataset.more);
+  else if (t.dataset.hide) admin("hide", { name: t.dataset.hide, hidden: t.dataset.state === "1" });
+  else if (t.dataset.rm) { admin("remove-reason", { name: t.dataset.rm, by: t.dataset.by }); closeSheet(); }
+  else if (t.dataset.demo) demoSwitch(t.dataset.demo);
+});
+$("nomLink").addEventListener("input", preview);
+$("nomReason").addEventListener("input", updateCounter);
+$("nomSend").addEventListener("click", nominate);
+$("sheetClose").addEventListener("click", closeSheet);
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeSheet(); });
+$("admPhaseSet").addEventListener("click", () => admin("phase", { phase: $("admPhase").value || null }));
+$("admRecount").addEventListener("click", () => admin("recount"));
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+setInterval(tick, 1000);
+setInterval(() => { if (!document.hidden && S.phase !== "vote") refresh(); }, 60000);
+
+/* ===== OFFLINE BACKEND =====
+   "fake":  invented artists and login, nothing saved (preview, or ?demo in the address)
+   "local": real Audiotool login and real profiles, saved only in this browser (no worker set yet)
+*/
+const ADMINS = ["users/sandburgen"];
+const LS_KEY = "fav_local_v1";
+function lsLoad() {
+  if (MODE !== "local") return null;
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) { return null; }
+}
+const demo = Object.assign({
+  signedIn: false, admin: false,
+  phase: ["soon", "nominate", "vote", "ended"].includes(params.get("phase")) ? params.get("phase") : "nominate",
+  profiles: {}, noms: [], votes: {}, hidden: []
+}, lsLoad() || {});
+function lsSave() {
+  if (MODE !== "local") return;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ phase: demo.phase, noms: demo.noms, votes: demo.votes, hidden: demo.hidden })); } catch (e) {}
+}
+const demoMe = () => MODE === "fake" ? "users/you" : atAccount();
+const demoIsAdmin = () => MODE === "fake" ? demo.admin : ADMINS.includes(demoMe());
+
+if (MODE === "fake") (function seedDemo() {
+  const people = [
+    ["users/kelp.unit", "Kelp Unit"], ["users/marta_volt", "Marta Volt"], ["users/nightferry", "Night Ferry"],
+    ["users/oblique303", "Oblique 303"], ["users/dustpan", "Dustpan Choir"], ["users/lumen-k", "Lumen K"],
+    ["users/grauzone", "Grauzone"], ["users/tapehiss", "Tape Hiss"], ["users/you", "You (demo)"],
+    ["users/fennel", "Fennel"], ["users/bitsalt", "Bitsalt"], ["users/mira.o", "Mira O"]
+  ];
+  for (const [n, d] of people) demo.profiles[n] = { name: n, displayName: d };
+  const said = [
+    "Every release sounds like a different planet, and the mixdowns are spotless.",
+    "Always helps newcomers in the chat and still drops a track every week.",
+    "Took the Pulverisateur somewhere I did not know it could go.",
+    "Their remix of the community track was the best thing I heard this year.",
+    "Consistent, original and never boring. Overdue for a feature.",
+    "The sound design alone deserves this.",
+    "Low key legend. Listen to the last album front to back."
+  ];
+  const nominees = people.slice(0, 8).map(p => p[0]);
+  const voters = ["users/fennel", "users/bitsalt", "users/mira.o", "users/kelp.unit", "users/grauzone"];
+  let i = 0;
+  for (const n of nominees) {
+    const k = 1 + (hash(n) % 3);
+    for (let j = 0; j < k; j++) {
+      const by = voters[(i + j) % voters.length];
+      if (by !== n) demo.noms.push({ nominee: n, by, text: said[(i + j) % said.length], at: Date.now() - (i * 7 + j) * 36e5 });
+    }
+    i++;
+  }
+  for (let v = 0; v < 23; v++) {
+    const pick = nominees.slice().sort((a, b) => hash(v + a) - hash(v + b));
+    demo.votes["users/demo" + v] = { "3": pick[0], "2": pick[1], "1": pick[2] };
+  }
+})();
+
+function demoNominees() {
+  const map = new Map();
+  for (const x of demo.noms) {
+    if (!map.has(x.nominee)) map.set(x.nominee, { name: x.nominee, hidden: demo.hidden.includes(x.nominee), reasons: [] });
+    map.get(x.nominee).reasons.push({ by: x.by, text: x.text, at: x.at });
+  }
+  return [...map.values()];
+}
+function demoResults() {
+  const valid = new Set(demoNominees().filter(n => !n.hidden).map(n => n.name));
+  const sc = new Map();
+  for (const n of valid) sc.set(n, { name: n, points: 0, h3: 0, h2: 0, h1: 0 });
+  let voters = 0;
+  for (const [voter, v] of Object.entries(demo.votes)) {
+    let used = false;
+    for (const p of [3, 2, 1]) { const w = v[p]; if (w && valid.has(w) && w !== voter) { sc.get(w).points += p; sc.get(w)["h" + p]++; used = true; } }
+    if (used) voters++;
+  }
+  const ranking = [...sc.values()].sort((a, b) => b.points - a.points || b.h3 - a.h3 || b.h2 - a.h2 || a.name.localeCompare(b.name));
+  return { ranking, voters };
+}
+function demoDates(phase) {
+  const now = Date.now(), d = n => new Date(now + n * 864e5).toISOString();
+  if (phase === "soon") return { nominateFrom: d(2.04), voteFrom: d(16), voteUntil: d(23) };
+  if (phase === "vote") return { nominateFrom: d(-14), voteFrom: d(-2), voteUntil: d(5.08) };
+  if (phase === "ended") return { nominateFrom: d(-21), voteFrom: d(-9), voteUntil: d(-2) };
+  return { nominateFrom: d(-3), voteFrom: d(4.06), voteUntil: d(11) };
+}
+async function demoApi(path, body) {
+  await new Promise(r => setTimeout(r, 120));
+  const fail = (m, s) => { const e = new Error(m); e.status = s || 400; throw e; };
+  if (path === "/state") return { phase: demo.phase, override: null, dates: demoDates(demo.phase), rules: { maxReason: 160, maxNominations: 5 },
+    nominees: demo.phase === "soon" ? [] : demoNominees().filter(n => !n.hidden), results: demo.phase === "ended" ? demoResults() : null };
+  const me = demoMe();
+  if (!me || (MODE === "fake" && !demo.signedIn)) fail("please sign in first", 401);
+  const admin = demoIsAdmin();
+  if (path === "/me") return { account: me, isAdmin: admin, votes: Object.assign({}, demo.votes[me] || {}),
+    nominated: demo.noms.filter(x => x.by === me).map(x => x.nominee), allNominees: admin ? demoNominees() : undefined };
+  if (path === "/nominate") {
+    if (demo.phase !== "nominate") fail("nominations are closed", 403);
+    const nominee = String(body.nominee || "").toLowerCase();
+    if (nominee === me) fail("you can't nominate yourself");
+    if (demo.hidden.includes(nominee)) fail("this artist can't be nominated");
+    if (MODE === "local") {
+      const users = await atUsers([nominee]).catch(() => []);
+      if (!users.length) fail("this Audiotool user does not exist");
+    }
+    const mine = demo.noms.filter(x => x.by === me);
+    const old = mine.find(x => x.nominee === nominee);
+    if (!old && mine.length >= 5) fail("you used all 5 nominations", 403);
+    demo.noms = demo.noms.filter(x => !(x.by === me && x.nominee === nominee));
+    demo.noms.push({ nominee, by: me, text: body.reason, at: Date.now() });
+    lsSave();
+    return { ok: true, nominee };
+  }
+  if (path === "/vote") {
+    if (demo.phase !== "vote") fail("voting is closed", 403);
+    const v = {}; for (const p of ["3", "2", "1"]) if (body[p]) v[p] = body[p];
+    if (Object.keys(v).length) demo.votes[me] = v; else delete demo.votes[me];
+    lsSave();
+    return { ok: true };
+  }
+  if (path.startsWith("/admin/")) {
+    if (!admin) fail("admins only", 403);
+    if (path === "/admin/remove-reason") demo.noms = demo.noms.filter(x => !(x.nominee === body.name && x.by === body.by));
+    if (path === "/admin/hide") {
+      demo.hidden = demo.hidden.filter(n => n !== body.name);
+      if (body.hidden) demo.hidden.push(body.name);
+    }
+    if (path === "/admin/phase") demo.phase = body.phase || "nominate";
+    lsSave();
+    return { ok: true };
+  }
+  fail("not found", 404);
+}
+async function demoSwitch(what) {
+  if (what === "admin") { demo.admin = !demo.admin; demo.signedIn = demo.signedIn || demo.admin; }
+  else if (what === "reset") {
+    if (!confirm("Delete all test nominations and votes in this browser?")) return;
+    demo.noms = []; demo.votes = {}; demo.hidden = []; demo.phase = "nominate";
+  }
+  else demo.phase = what;
+  lsSave();
+  await refresh();
+}
+
+/* ===== START ===== */
+(async function start() {
+  renderStatus();
+  if (MODE !== "fake") await atBoot();
+  await refresh();
+  restoreDraft();
+  if ($("nomLink").value) preview();
+  updateCounter();
+})();
+</script>
+</body>
+</html>
